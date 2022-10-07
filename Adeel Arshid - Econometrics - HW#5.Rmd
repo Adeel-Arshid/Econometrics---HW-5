@@ -1,0 +1,71 @@
+---
+title: "Adeel Arshid - Econometrics - HW#5"
+author: "Adeel Arshid, Suguru Iwashiro, Amira Elmakawy"
+date: "10/6/2022"
+output: html_document
+---
+
+library(data.table)
+library(ggplot2)
+library(tidyverse)
+library(DT)
+library(dplyr)
+library(tidyr)
+library(psych)
+options(dplyr.summarise.inform = FALSE)
+
+load("~/Desktop/acs2017_ny/acs2017_ny_data.RData")
+rm(list = ls(all = TRUE))
+colnames(acs2017_ny)
+attach(acs2017_ny)
+
+```{r}
+use_varb <- (AGE >= 22) & (AGE <= 65) & (LABFORCE == 2) & (WKSWORK2 > 0) & (UHRSWORK >= 1)
+dat_use <- subset(acs2017_ny,use_varb) 
+attach(dat_use)
+VETSTAT
+veteran <- ifelse(VETSTAT == 2, 1, 0)
+```
+
+
+```{r}
+Economics_deg <- ifelse(DEGFIELDD == "Economics", 1, 0)
+business_deg <- ifelse(DEGFIELDD == "Business Management and Administration" | DEGFIELDD == "General Business", 1, 0)
+
+model_temp1 <- lm(INCTOT ~  AGE + female + white + AfAm + Asian + veteran)
+model_temp2 <- lm(INCTOT ~  educ_nohs + educ_hs + educ_college + educ_advdeg + Economics_deg + business_deg)
+
+summary(model_temp1)
+summary(model_temp2)
+
+plot(model_temp1)
+plot(model_temp2)
+```
+
+# maybe get fancy
+```{r}
+install.packages("stargazer")
+library(stargazer)
+require(stargazer)
+stargazer(model_temp1, type = "text")
+
+install.packages("AER")
+library(AER)
+
+NNobs <- length(INCWAGE)
+set.seed(45678) # just so you can replicate and get same "random" choices
+graph_obs <- (runif(NNobs) < 0.1) # so something like just 1/10 as many obs
+dat_graph <-subset(dat_use,graph_obs)
+
+plot(INCWAGE ~ jitter(AGE, factor = 2), pch = 16, col = rgb(0.5, 0.5, 0.5, alpha = 0.2), data = dat_graph)
+# ^^ that looks like crap since Wages are soooooooo skew!  So try to find some sensible ylim = c(0, ??)
+plot(INCWAGE ~ jitter(AGE, factor = 2), pch = 16, col = rgb(0.5, 0.5, 0.5, alpha = 0.2), ylim = c(0,150000), data = dat_graph)
+```
+
+# change this line to fit your regression
+```{r}
+to_be_predicted2 <- data.frame(AGE = 25:55, female = 1, AfAm = 0, Asian = 0, Amindian = 1, race_oth = 1, Hispanic = 1, educ_hs = 0, educ_somecoll = 0, educ_college = 1, educ_advdeg = 0)
+to_be_predicted2$yhat <- predict(model_temp1, newdata = to_be_predicted2)
+
+lines(yhat ~ AGE, data = to_be_predicted2)
+```
